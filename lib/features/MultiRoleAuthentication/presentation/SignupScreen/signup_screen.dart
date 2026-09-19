@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/feedback.dart';
 import '../../state/signup_draft.dart';
 
@@ -27,6 +28,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscureConfirmPassword = true;
   bool _hasAcceptedConsent = false;
 
+  bool get _isValid =>
+      _nameController.text.trim().isNotEmpty &&
+      _nameController.text.trim().length <= 120 &&
+      validateEmail(_emailController.text) == null &&
+      validatePassword(_passwordController.text) == null &&
+      _confirmPasswordController.text == _passwordController.text &&
+      _hasAcceptedConsent;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final c in [_nameController, _emailController, _passwordController, _confirmPasswordController]) {
+      c.addListener(() => setState(() {}));
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -36,7 +53,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  void _onSignUpPressed() {
+  Future<void> _onSignUpPressed() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
     if (!_hasAcceptedConsent) {
@@ -65,6 +82,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Form(
                   key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -145,6 +163,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         decoration: appInputDecoration(
                           hint: 'Min 8 chars, a letter and a digit',
                           suffix: IconButton(
+                            tooltip: _obscurePassword ? 'Show password' : 'Hide password',
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility_outlined
@@ -170,6 +189,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         decoration: appInputDecoration(
                           hint: 'Re-enter password',
                           suffix: IconButton(
+                            tooltip: _obscureConfirmPassword ? 'Show password' : 'Hide password',
                             icon: Icon(
                               _obscureConfirmPassword
                                   ? Icons.visibility_outlined
@@ -219,48 +239,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
               ),
             ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(28, 12, 28, 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                top: false,
-                child: SizedBox(
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: _onSignUpPressed,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryRed,
-                      elevation: 4,
-                      shadowColor: AppColors.primaryRed.withValues(alpha: 0.4),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Continue to Role Selection',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
-                      ],
-                    ),
-                  ),
-                ),
+            BottomActionBar(
+              child: AppButton(
+                label: 'Continue to role selection',
+                icon: Icons.arrow_forward_rounded,
+                height: 54,
+                enabled: _isValid,
+                onPressed: _isValid ? _onSignUpPressed : null,
               ),
             ),
           ],

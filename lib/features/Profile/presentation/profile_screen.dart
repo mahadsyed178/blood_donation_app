@@ -10,6 +10,7 @@ import '../../../core/providers/core_providers.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/async_view.dart';
+import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/feedback.dart';
 
 /// `PATCH /donors/me` / `PATCH /requestors/me`, plus account deletion.
@@ -34,6 +35,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _busy = false;
   Map<String, String> _fieldErrors = const {};
 
+  bool get _isValid {
+    if (_name.text.trim().isEmpty || _name.text.trim().length > 120) return false;
+    if (validatePhone(_phone.text) != null) return false;
+    final w = _weight.text.trim();
+    if (w.isNotEmpty) {
+      final v = double.tryParse(w);
+      if (v == null || v < 30 || v > 300) return false;
+    }
+    return _nid.text.trim().length <= 30;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +60,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _dob = donor?.dateOfBirth;
     _lastDonation = donor?.lastDonationDate;
     _availableTime = donor?.availableTime;
+    for (final c in [_name, _phone, _nid, _weight]) {
+      c.addListener(() => setState(() {}));
+    }
   }
 
   @override
@@ -161,6 +176,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
                 child: Form(
                   key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -329,35 +345,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, -4)),
-                ],
-              ),
-              child: SafeArea(
-                top: false,
-                child: SizedBox(
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: _busy ? null : _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryRed,
-                      disabledBackgroundColor: AppColors.primaryRed.withValues(alpha: 0.6),
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: _busy
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                        : const Text('Save Changes',
-                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                  ),
-                ),
+            BottomActionBar(
+              child: AppButton(
+                label: 'Save changes',
+                icon: Icons.save_outlined,
+                height: 54,
+                enabled: _isValid,
+                busy: _busy,
+                onPressed: _isValid ? _save : null,
               ),
             ),
           ],

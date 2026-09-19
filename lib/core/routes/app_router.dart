@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/BloodRequestsLifeCycle/presentation/create_request_screen.dart';
+import '../../features/BloodRequestsLifeCycle/presentation/request_detail_screen.dart';
 import '../../features/Co-ordinationChat/presenatation/chat_thread_screen.dart';
 import '../../features/DashBoardScreen/presentation/dashboard_screen.dart';
 import '../../features/DonorMatching/presentation/donor_matching_screen.dart';
@@ -15,6 +16,7 @@ import '../../features/MultiRoleAuthentication/state/signup_draft.dart';
 import '../../features/Onboarding/presentation/onboarding_screen.dart';
 import '../../features/Profile/presentation/profile_screen.dart';
 import '../../features/Splash/presentation/splash_screen.dart';
+import '../models/blood_request.dart';
 import '../models/chat.dart';
 import '../providers/auth_provider.dart';
 import 'app_routes.dart';
@@ -85,6 +87,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.createRequest,
         name: 'create_request',
         builder: (_, __) => const CreateRequestScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.requestDetail,
+        name: 'request_detail',
+        builder: (_, state) => RequestDetailScreen(
+          requestId: state.pathParameters['id']!,
+          initial: state.extra as BloodRequest?,
+        ),
       ),
       GoRoute(
         path: AppRoutes.locationPicker,

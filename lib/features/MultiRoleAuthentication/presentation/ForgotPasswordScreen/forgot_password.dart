@@ -6,6 +6,7 @@ import '../../../../core/models/enums.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/feedback.dart';
 
 /// `POST /{donors|requestors}/forgot-password`. The backend emails a reset
@@ -22,6 +23,14 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   UserRole _role = UserRole.donor;
   bool _isLoading = false;
+
+  bool get _isValid => validateEmail(_emailController.text) == null;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
@@ -67,6 +76,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Form(
                   key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -165,62 +175,24 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 ),
               ),
             ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(28, 12, 28, 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, -4),
+            BottomActionBar(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppButton(
+                    label: 'Send reset link',
+                    icon: Icons.send_rounded,
+                    height: 54,
+                    enabled: _isValid,
+                    busy: _isLoading,
+                    onPressed: _isValid ? _onSendPressed : null,
+                  ),
+                  const SizedBox(height: 6),
+                  TextButton(
+                    onPressed: () => context.push(AppRoutes.newPassword),
+                    child: const Text('Already have a reset token?'),
                   ),
                 ],
-              ),
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      height: 54,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _onSendPressed,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryRed,
-                          disabledBackgroundColor: AppColors.primaryRed.withValues(alpha: 0.6),
-                          elevation: 4,
-                          shadowColor: AppColors.primaryRed.withValues(alpha: 0.4),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 22,
-                                width: 22,
-                                child: CircularProgressIndicator(
-                                    color: Colors.white, strokeWidth: 2.5),
-                              )
-                            : const Text(
-                                'Send Reset Link',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextButton(
-                      onPressed: () => context.push(AppRoutes.newPassword),
-                      child: const Text(
-                        'Already have a reset token?',
-                        style: TextStyle(color: AppColors.primaryRed, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],

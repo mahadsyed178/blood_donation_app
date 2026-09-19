@@ -22,10 +22,15 @@ class SplashNotifier extends Notifier<SplashState> {
       final remaining = _minSplashDuration - stopwatch.elapsed;
       if (remaining > Duration.zero) await Future<void>.delayed(remaining);
       if (!ref.mounted) return;
-      state = state.copyWith(
+      state = SplashState(
         status: auth.isAuthenticated
             ? SplashStatus.authenticated
-            : SplashStatus.unauthenticated,
+            : auth.serverUnreachable
+                ? SplashStatus.error
+                : SplashStatus.unauthenticated,
+        errorMessage: auth.serverUnreachable
+            ? 'We couldn’t reach the server to restore your session. Check your connection and try again.'
+            : null,
       );
     }
 
@@ -37,7 +42,7 @@ class SplashNotifier extends Notifier<SplashState> {
   }
 
   void retry() {
-    state = const SplashState();
+    ref.invalidateSelf();
     ref.read(authProvider.notifier).restoreSession();
   }
 }

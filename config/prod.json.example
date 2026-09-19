@@ -1,4 +1,6 @@
 {
   "API_BASE_URL": "https://api.your-domain.example",
-  "APP_ENV": "prod"
+  "APP_ENV": "prod",
+  "OSM_TILE_URL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  "NOMINATIM_URL": "https://nominatim.openstreetmap.org"
 }

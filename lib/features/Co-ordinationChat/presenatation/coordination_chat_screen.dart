@@ -8,6 +8,7 @@ import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../state/chat_providers.dart';
 
 /// `GET /chat/threads` — one row per match this account is part of.
@@ -27,6 +28,7 @@ class CoordinationChatScreen extends ConsumerWidget {
         child: AsyncView<List<ChatThreadSummary>>(
           value: threads,
           onRetry: refresh,
+          loadingBuilder: () => const SkeletonList(cardHeight: 92, padding: EdgeInsets.all(16)),
           isEmpty: (l) => l.isEmpty,
           emptyBuilder: () => ListView(
             physics: const AlwaysScrollableScrollPhysics(),

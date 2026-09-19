@@ -6,6 +6,8 @@ import '../../../core/models/enums.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../core/widgets/map/approximate_location_map.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../state/hospital_providers.dart';
 
 /// `GET /blood-requests/hospital/pending` +
@@ -28,6 +30,7 @@ class HospitalVerificationScreen extends ConsumerWidget {
         child: AsyncView<List<BloodRequest>>(
           value: queue,
           onRetry: refresh,
+          loadingBuilder: () => const SkeletonList(padding: EdgeInsets.all(16)),
           builder: (list) => ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
@@ -183,6 +186,10 @@ class _VerificationCardState extends ConsumerState<_VerificationCard> {
                     icon: Icons.priority_high_rounded),
               ],
             ),
+            if (r.displayPoint != null) ...[
+              const SizedBox(height: 12),
+              ApproximateLocationMap(point: r.displayPoint!, exact: r.isExactLocation, height: 130, caption: r.areaLabel),
+            ],
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),

@@ -8,7 +8,10 @@ import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../core/widgets/map/approximate_location_map.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../state/blood_request_providers.dart';
+import '../state/matching_rank.dart';
 
 /// `GET /blood-requests/{id}/matches` — who has committed, with contact
 /// details, for the poster (or hospital / admin).
@@ -72,19 +75,23 @@ class _MatchesSheet extends ConsumerWidget {
             child: AsyncView<List<RequestMatch>>(
               value: matches,
               onRetry: () async => ref.invalidate(requestMatchesProvider(request.id)),
+              loadingBuilder: () => const SkeletonList(count: 2, cardHeight: 120, padding: EdgeInsets.all(20)),
               isEmpty: (l) => l.isEmpty,
               emptyBuilder: () => const EmptyState(
                 icon: Icons.hourglass_empty_rounded,
                 title: 'No one has committed yet',
                 subtitle: 'Nearby compatible donors have been notified. Widening the radius reaches more of them.',
               ),
-              builder: (list) => ListView.separated(
-                controller: controller,
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                itemCount: list.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (_, i) => _MatchTile(match: list[i]),
-              ),
+              builder: (list) {
+                final ranked = rankMatchesForPoster(list);
+                return ListView.separated(
+                  controller: controller,
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                  itemCount: ranked.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (_, i) => _MatchTile(match: ranked[i]),
+                );
+              },
             ),
           ),
         ],
@@ -137,7 +144,7 @@ class _MatchTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Chip2(label: m.status.label, color: color),
+              Chip2(label: m.status.label, color: color, icon: switch (m.status) { MatchStatus.accepted => Icons.hourglass_bottom_rounded, MatchStatus.completed => Icons.check_circle_rounded, MatchStatus.cancelled => Icons.cancel_rounded }),
             ],
           ),
           const SizedBox(height: 10),
@@ -157,6 +164,14 @@ class _MatchTile extends StatelessWidget {
               ],
             ],
           ),
+          if (m.isOpen && m.acceptorApproxPoint != null) ...[
+            const SizedBox(height: 10),
+            ApproximateLocationMap(
+              point: m.acceptorApproxPoint!,
+              height: 110,
+              caption: m.distanceKm != null ? '${formatKm(m.distanceKm!)} from the patient' : null,
+            ),
+          ],
           if (m.cancelReason != null && m.cancelReason!.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text('Cancelled: ${m.cancelReason}',

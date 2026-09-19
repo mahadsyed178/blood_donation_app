@@ -2,6 +2,8 @@ enum SplashStatus {
   loading,
   authenticated,
   unauthenticated,
+
+  /// A stored session couldn't be verified because the server is unreachable.
   error,
 }
 

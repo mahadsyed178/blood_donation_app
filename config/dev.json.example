@@ -1,4 +1,6 @@
 {
   "API_BASE_URL": "http://10.0.2.2:8080",
-  "APP_ENV": "dev"
+  "APP_ENV": "dev",
+  "OSM_TILE_URL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  "NOMINATIM_URL": "https://nominatim.openstreetmap.org"
 }

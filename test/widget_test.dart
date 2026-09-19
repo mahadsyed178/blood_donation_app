@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:blood_donation_app/core/geo/geo_utils.dart';
 import 'package:blood_donation_app/core/models/blood_request.dart';
+import 'package:blood_donation_app/features/BloodRequestsLifeCycle/state/matching_rank.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:blood_donation_app/core/models/enums.dart';
 
 void main() {
@@ -51,5 +54,70 @@ void main() {
   testWidgets('material widgets build', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Text('ok'))));
     expect(find.text('ok'), findsOneWidget);
+  });
+
+  group('GeoUtils', () {
+    test('haversine Karachi Saddar -> Clifton is ~5 km', () {
+      final km = GeoUtils.haversineKm(24.8560, 67.0200, 24.8138, 67.0300);
+      expect(km, closeTo(4.8, 0.3));
+    });
+
+    test('formatDistance rounds and never prints coordinates', () {
+      expect(GeoUtils.formatDistance(0.32), '~300 m');
+      expect(GeoUtils.formatDistance(3.24), '~3.2 km');
+      expect(GeoUtils.formatDistance(14.7), '~15 km');
+    });
+
+    test('rejects invalid coordinates', () {
+      expect(GeoUtils.isValidCoordinate(0, 0), isFalse);
+      expect(GeoUtils.isValidCoordinate(null, 67), isFalse);
+      expect(GeoUtils.isValidCoordinate(91, 67), isFalse);
+      expect(GeoUtils.isValidCoordinate(24.86, 181), isFalse);
+      expect(GeoUtils.isValidCoordinate(double.nan, 67), isFalse);
+      expect(GeoUtils.isValidCoordinate(24.86, 67.01), isTrue);
+    });
+
+    test('approximate() shifts 300-500 m deterministically', () {
+      const exact = LatLng(24.86, 67.01);
+      final a = GeoUtils.approximate(exact, seed: 'abc');
+      final b = GeoUtils.approximate(exact, seed: 'abc');
+      expect(a, b);
+      final km = GeoUtils.distanceKm(exact, a);
+      expect(km, inInclusiveRange(0.29, 0.51));
+    });
+
+    test('service area check', () {
+      const area = ServiceArea(name: 't', center: LatLng(24.86, 67.01), radiusKm: 60);
+      expect(area.contains(const LatLng(24.9, 67.1)), isTrue);
+      expect(area.contains(const LatLng(31.5, 74.3)), isFalse); // Lahore
+    });
+  });
+
+  test('donor ranking: exact type > compatible, then distance, then recency', () {
+    BloodRequest make(String id, BloodType t, double km, int minutesAgo, {UrgencyLevel u = UrgencyLevel.routine}) =>
+        BloodRequest(
+          id: id,
+          patientName: 'p',
+          bloodTypeNeeded: t,
+          unitsNeeded: 1,
+          unitsSecured: 0,
+          urgencyLevel: u,
+          requiredBy: DateTime.now().add(const Duration(hours: 5)),
+          isHospitalBacked: false,
+          status: RequestStatus.active,
+          currentRadiusKm: 8,
+          contactPhone: '03001234567',
+          createdAt: DateTime.now().subtract(Duration(minutes: minutesAgo)),
+          updatedAt: DateTime.now(),
+          distanceKm: km,
+        );
+    final ranked = rankRequestsForDonor([
+      make('far-exact', BloodType.oPos, 9, 5),
+      make('near-compat', BloodType.aPos, 1, 5),
+      make('near-exact-old', BloodType.oPos, 2, 60),
+      make('near-exact-new', BloodType.oPos, 2, 1),
+    ], BloodType.oPos);
+    expect(ranked.map((r) => r.id).toList(),
+        ['near-exact-new', 'near-exact-old', 'far-exact', 'near-compat']);
   });
 }

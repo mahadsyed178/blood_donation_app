@@ -253,6 +253,7 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
             alignment: Alignment.center,
             children: [
               IconButton(
+                tooltip: 'Notifications',
                 icon: const Icon(Icons.notifications_none_rounded, color: AppColors.textDark),
                 onPressed: () {
                   if (attention == 0) {

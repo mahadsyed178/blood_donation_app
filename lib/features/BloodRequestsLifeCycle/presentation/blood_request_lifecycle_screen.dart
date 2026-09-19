@@ -9,9 +9,11 @@ import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../Commitments/state/match_providers.dart';
 import '../../DonorMatching/presentation/donor_matching_screen.dart';
 import '../state/blood_request_providers.dart';
+import '../state/matching_rank.dart';
 import 'accept_request_sheet.dart';
 import 'request_matches_sheet.dart';
 
@@ -170,6 +172,7 @@ class _BloodRequestsLifecycleScreenState extends ConsumerState<BloodRequestsLife
               child: AsyncView<List<BloodRequest>>(
                 value: asyncList,
                 onRetry: refresh,
+                loadingBuilder: () => const SkeletonList(),
                 isEmpty: (list) => list.where((r) => _matches(r, _selectedFilter)).isEmpty,
                 emptyBuilder: () => ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -189,14 +192,21 @@ class _BloodRequestsLifecycleScreenState extends ConsumerState<BloodRequestsLife
                   ],
                 ),
                 builder: (list) {
-                  final requests = list.where((r) => _matches(r, _selectedFilter)).toList();
-                  return ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
-                    itemCount: requests.length,
-                    itemBuilder: (context, index) => RequestCard(
-                      request: requests[index],
-                      viewerRole: role,
+                  var requests = list.where((r) => _matches(r, _selectedFilter)).toList();
+                  // PRD ranking for donors: compatibility → distance → recency.
+                  if (isDonor && donor != null) requests = rankRequestsForDonor(requests, donor.bloodType);
+                  return AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: ListView.builder(
+                      key: ValueKey('${_selectedFilter.name}-${requests.length}'),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
+                      itemCount: requests.length,
+                      itemBuilder: (context, index) => RequestCard(
+                        key: ValueKey(requests[index].id),
+                        request: requests[index],
+                        viewerRole: role,
+                      ),
                     ),
                   );
                 },
@@ -224,6 +234,15 @@ class RequestCard extends ConsumerWidget {
         _ => AppColors.textGrey,
       };
 
+  IconData _statusIcon(RequestStatus s) => switch (s) {
+        RequestStatus.active => Icons.radio_button_checked_rounded,
+        RequestStatus.partiallyMatched || RequestStatus.fullyMatched => Icons.hourglass_bottom_rounded,
+        RequestStatus.fulfilled => Icons.check_circle_rounded,
+        RequestStatus.pendingVerification => Icons.pending_rounded,
+        RequestStatus.expired => Icons.timer_off_rounded,
+        _ => Icons.cancel_rounded,
+      };
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = request;
@@ -248,7 +267,10 @@ class RequestCard extends ConsumerWidget {
           BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2)),
         ],
       ),
-      child: Padding(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.push(AppRoutes.requestDetailPath(data.id), extra: data),
+        child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,7 +325,7 @@ class RequestCard extends ConsumerWidget {
                     label: data.urgencyLevel.label,
                     color: urgencyColor,
                     icon: Icons.priority_high_rounded),
-                Chip2(label: data.status.label, color: statusColor),
+                Chip2(label: data.status.label, color: statusColor, icon: _statusIcon(data.status)),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -373,6 +395,7 @@ class RequestCard extends ConsumerWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -411,6 +434,18 @@ class _DonorActions extends ConsumerWidget {
     final canAccept = request.status.isOpen && (donor?.isAvailable ?? false);
     return Row(
       children: [
+        OutlinedButton.icon(
+          onPressed: () => context.push(AppRoutes.requestDetailPath(request.id), extra: request),
+          icon: const Icon(Icons.map_outlined, size: 16),
+          label: const Text('Details'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.textDark,
+            side: const BorderSide(color: AppColors.borderGrey),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+        const SizedBox(width: 8),
         Expanded(
           child: OutlinedButton.icon(
             icon: const Icon(Icons.volunteer_activism, size: 16),

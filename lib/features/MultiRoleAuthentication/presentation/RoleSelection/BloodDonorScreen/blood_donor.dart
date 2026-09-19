@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,6 +9,7 @@ import '../../../../../core/network/api_exception.dart';
 import '../../../../../core/providers/auth_provider.dart';
 import '../../../../../core/routes/app_routes.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/app_button.dart';
 import '../../../../../core/widgets/feedback.dart';
 import '../../../state/signup_draft.dart';
 
@@ -45,9 +47,27 @@ class _RoleBasedRegistrationScreenState
   DateTime? _lastDonationDate;
   AvailableTime? _availableTime;
 
+  bool get _isValid {
+    if (validatePhone(_mobileController.text) != null) return false;
+    if (!_agreedToTerms) return false;
+    if (_selectedRole == _SignupRole.donor) {
+      if (_gender == null || _dateOfBirth == null || _bloodType == null) return false;
+      final w = _weightController.text.trim();
+      if (w.isNotEmpty) {
+        final v = double.tryParse(w);
+        if (v == null || v < 30 || v > 300) return false;
+      }
+      if (_nidController.text.trim().length > 30) return false;
+    }
+    return true;
+  }
+
   @override
   void initState() {
     super.initState();
+    for (final c in [_mobileController, _nidController, _weightController]) {
+      c.addListener(() => setState(() {}));
+    }
     if (widget.draft == null) {
       // Deep link / restart without step 1: send them back for credentials.
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -176,6 +196,7 @@ class _RoleBasedRegistrationScreenState
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Form(
                   key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -188,6 +209,7 @@ class _RoleBasedRegistrationScreenState
                       TextFormField(
                         controller: _mobileController,
                         keyboardType: TextInputType.phone,
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s()]'))],
                         textInputAction: TextInputAction.next,
                         style: const TextStyle(fontSize: 14),
                         validator: validatePhone,
@@ -316,7 +338,8 @@ class _RoleBasedRegistrationScreenState
                 textInputAction: TextInputAction.next,
                 style: const TextStyle(fontSize: 14),
                 maxLength: 30,
-                buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
+                buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
+                    currentLength >= 24 ? Text('$currentLength / $maxLength', style: const TextStyle(fontSize: 10)) : null,
                 decoration: _decoration('NID (optional)', error: _fieldErrors['national_id']),
               ),
             ),
@@ -361,6 +384,7 @@ class _RoleBasedRegistrationScreenState
         TextFormField(
           controller: _weightController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}(\.\d{0,1})?'))],
           textInputAction: TextInputAction.done,
           style: const TextStyle(fontSize: 14),
           validator: (v) {
@@ -459,32 +483,13 @@ class _RoleBasedRegistrationScreenState
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
+            AppButton(
+              label: isDonor ? 'Become a donor' : 'Create requester account',
+              icon: isDonor ? Icons.volunteer_activism_rounded : Icons.bloodtype_rounded,
               height: 54,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _onSubmit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryRed,
-                  disabledBackgroundColor: AppColors.primaryRed.withValues(alpha: 0.6),
-                  elevation: 4,
-                  shadowColor: AppColors.primaryRed.withValues(alpha: 0.4),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                      )
-                    : Text(
-                        isDonor ? 'Become a Donor' : 'Create Requester Account',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
+              enabled: _isValid,
+              busy: _isLoading,
+              onPressed: _isValid ? _onSubmit : null,
             ),
             const SizedBox(height: 10),
             Row(

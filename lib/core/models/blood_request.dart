@@ -1,3 +1,6 @@
+import 'package:latlong2/latlong.dart';
+
+import '../geo/geo_utils.dart';
 import 'enums.dart';
 import 'json_helpers.dart';
 
@@ -25,6 +28,15 @@ class BloodRequest {
   final DateTime updatedAt;
   final double? distanceKm;
 
+  /// Fuzzed 300–500 m by the backend; safe to show anyone.
+  final double? approxLatitude;
+  final double? approxLongitude;
+
+  /// Only present on poster / hospital / admin responses.
+  final double? latitude;
+  final double? longitude;
+  final bool isExactLocation;
+
   const BloodRequest({
     required this.id,
     this.requestorId,
@@ -46,7 +58,23 @@ class BloodRequest {
     required this.createdAt,
     required this.updatedAt,
     this.distanceKm,
+    this.approxLatitude,
+    this.approxLongitude,
+    this.latitude,
+    this.longitude,
+    this.isExactLocation = false,
   });
+
+  /// The point to render: exact when we're allowed, else the fuzzed one.
+  LatLng? get displayPoint {
+    if (isExactLocation && GeoUtils.isValidCoordinate(latitude, longitude)) {
+      return LatLng(latitude!, longitude!);
+    }
+    if (GeoUtils.isValidCoordinate(approxLatitude, approxLongitude)) {
+      return LatLng(approxLatitude!, approxLongitude!);
+    }
+    return null;
+  }
 
   int get unitsRemaining => unitsNeeded - unitsSecured;
   double get progress => unitsNeeded == 0 ? 0 : unitsSecured / unitsNeeded;
@@ -76,6 +104,11 @@ class BloodRequest {
         createdAt: parseDateTime(json['created_at']),
         updatedAt: parseDateTime(json['updated_at']),
         distanceKm: parseDoubleOrNull(json['distance_km']),
+        approxLatitude: parseDoubleOrNull(json['approx_latitude']),
+        approxLongitude: parseDoubleOrNull(json['approx_longitude']),
+        latitude: parseDoubleOrNull(json['latitude']),
+        longitude: parseDoubleOrNull(json['longitude']),
+        isExactLocation: json['location_precision'] == 'exact',
       );
 }
 
@@ -134,6 +167,8 @@ class MatchRequestSummary {
   final bool isHospitalBacked;
   final double currentRadiusKm;
   final String? areaLabel;
+  final double? approxLatitude;
+  final double? approxLongitude;
 
   const MatchRequestSummary({
     required this.id,
@@ -148,7 +183,13 @@ class MatchRequestSummary {
     required this.isHospitalBacked,
     required this.currentRadiusKm,
     this.areaLabel,
+    this.approxLatitude,
+    this.approxLongitude,
   });
+
+  LatLng? get approxPoint => GeoUtils.isValidCoordinate(approxLatitude, approxLongitude)
+      ? LatLng(approxLatitude!, approxLongitude!)
+      : null;
 
   String get placeLabel =>
       (hospitalNameText?.isNotEmpty ?? false) ? hospitalNameText! : (areaLabel ?? 'Location not set');
@@ -167,6 +208,8 @@ class MatchRequestSummary {
         isHospitalBacked: json['is_hospital_backed'] as bool,
         currentRadiusKm: parseDouble(json['current_radius_km']),
         areaLabel: json['area_label'] as String?,
+        approxLatitude: parseDoubleOrNull(json['approx_latitude']),
+        approxLongitude: parseDoubleOrNull(json['approx_longitude']),
       );
 }
 
@@ -188,6 +231,8 @@ class RequestMatch {
   final String posterPhone;
   final MatchRequestSummary bloodRequest;
   final double? distanceKm;
+  final double? acceptorApproxLatitude;
+  final double? acceptorApproxLongitude;
 
   const RequestMatch({
     required this.id,
@@ -206,7 +251,14 @@ class RequestMatch {
     required this.posterPhone,
     required this.bloodRequest,
     this.distanceKm,
+    this.acceptorApproxLatitude,
+    this.acceptorApproxLongitude,
   });
+
+  LatLng? get acceptorApproxPoint =>
+      GeoUtils.isValidCoordinate(acceptorApproxLatitude, acceptorApproxLongitude)
+          ? LatLng(acceptorApproxLatitude!, acceptorApproxLongitude!)
+          : null;
 
   bool get isOpen => status == MatchStatus.accepted;
 
@@ -229,6 +281,8 @@ class RequestMatch {
           json['blood_request'] as Map<String, dynamic>,
         ),
         distanceKm: parseDoubleOrNull(json['distance_km']),
+        acceptorApproxLatitude: parseDoubleOrNull(json['acceptor_approx_latitude']),
+        acceptorApproxLongitude: parseDoubleOrNull(json['acceptor_approx_longitude']),
       );
 
   RequestMatch copyWith({MatchStatus? status, DateTime? eta, String? cancelReason}) =>
@@ -249,5 +303,7 @@ class RequestMatch {
         posterPhone: posterPhone,
         bloodRequest: bloodRequest,
         distanceKm: distanceKm,
+        acceptorApproxLatitude: acceptorApproxLatitude,
+        acceptorApproxLongitude: acceptorApproxLongitude,
       );
 }

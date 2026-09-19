@@ -11,9 +11,11 @@ class AppRoutes {
   static const String createRequest = '/requests/new';
   static const String locationPicker = '/location-picker';
   static const String chatThread = '/chat/:matchId';
+  static const String requestDetail = '/requests/:id';
   static const String profile = '/profile';
 
   static String chatThreadPath(String matchId) => '/chat/$matchId';
+  static String requestDetailPath(String id) => '/requests/$id';
 
   /// Routes reachable without a session.
   static const Set<String> public = {

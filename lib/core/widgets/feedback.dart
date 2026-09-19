@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../geo/geo_utils.dart';
 import '../network/api_exception.dart';
 import '../theme/app_colors.dart';
 
@@ -70,6 +71,8 @@ Future<String?> promptText(
         controller: controller,
         maxLines: 3,
         maxLength: 500,
+        buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
+            currentLength >= 400 ? Text('$currentLength / $maxLength', style: const TextStyle(fontSize: 10)) : null,
         decoration: appInputDecoration(hint: hint),
       ),
       actions: [
@@ -111,8 +114,8 @@ String untilLabel(DateTime deadline) {
   return 'in ${diff.inDays} d';
 }
 
-String formatKm(double km) =>
-    km < 10 ? '${km.toStringAsFixed(1)} km' : '${km.round()} km';
+/// Distances are always shown rounded and prefixed "~" — see GeoUtils.
+String formatKm(double km) => GeoUtils.formatDistance(km);
 
 /// Mirrors the backend password rule: 8–128 chars, a letter and a digit.
 String? validatePassword(String? value) {
@@ -131,10 +134,15 @@ String? validateEmail(String? value) {
   return null;
 }
 
-/// Backend: 7–20 characters after trimming.
+/// Backend: 7–20 characters after trimming. Client adds a format check:
+/// digits with an optional leading +, spaces/dashes/parentheses allowed.
 String? validatePhone(String? value) {
   final v = (value ?? '').trim();
+  if (v.isEmpty) return 'Phone number is required';
   if (v.length < 7) return 'At least 7 digits';
   if (v.length > 20) return 'At most 20 characters';
+  if (!RegExp(r'^\+?[0-9][0-9\s\-()]{5,}[0-9]$').hasMatch(v)) return 'Enter a valid phone number';
+  final digits = v.replaceAll(RegExp(r'\D'), '');
+  if (digits.length < 7) return 'At least 7 digits';
   return null;
 }

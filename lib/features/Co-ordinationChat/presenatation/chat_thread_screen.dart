@@ -263,7 +263,11 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                   minLines: 1,
                   maxLines: 4,
                   maxLength: 2000,
-                  buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
+                  buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
+                      currentLength >= 1800
+                          ? Text('$currentLength / $maxLength',
+                              style: const TextStyle(fontSize: 10, color: AppColors.textGrey))
+                          : null,
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _send(),
                   decoration: appInputDecoration(hint: 'Type a message…').copyWith(
@@ -272,7 +276,9 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              InkWell(
+              Tooltip(
+                message: 'Send message',
+                child: InkWell(
                 borderRadius: BorderRadius.circular(24),
                 onTap: _send,
                 child: Container(
@@ -289,6 +295,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                         )
                       : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
                 ),
+              ),
               ),
             ],
           ),

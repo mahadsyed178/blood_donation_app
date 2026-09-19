@@ -6,6 +6,7 @@ import '../../../../../../core/models/enums.dart';
 import '../../../../../../core/providers/core_providers.dart';
 import '../../../../../../core/routes/app_routes.dart';
 import '../../../../../../core/theme/app_colors.dart';
+import '../../../../../../core/widgets/app_button.dart';
 import '../../../../../../core/widgets/feedback.dart';
 
 /// `POST /{donors|requestors}/reset-password` with the token from the reset
@@ -28,6 +29,19 @@ class _CreateNewPasswordScreenState extends ConsumerState<CreateNewPasswordScree
   bool _obscureNew = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
+
+  bool get _isValid =>
+      _tokenController.text.trim().isNotEmpty &&
+      validatePassword(_newPasswordController.text) == null &&
+      _confirmPasswordController.text == _newPasswordController.text;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final c in [_tokenController, _newPasswordController, _confirmPasswordController]) {
+      c.addListener(() => setState(() {}));
+    }
+  }
 
   @override
   void dispose() {
@@ -135,6 +149,7 @@ class _CreateNewPasswordScreenState extends ConsumerState<CreateNewPasswordScree
                 padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Form(
                   key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -221,6 +236,7 @@ class _CreateNewPasswordScreenState extends ConsumerState<CreateNewPasswordScree
                         decoration: appInputDecoration(
                           hint: 'Min 8 chars, a letter and a digit',
                           suffix: IconButton(
+                            tooltip: _obscureNew ? 'Show password' : 'Hide password',
                             icon: Icon(
                               _obscureNew ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                               color: AppColors.hintGrey,
@@ -242,6 +258,7 @@ class _CreateNewPasswordScreenState extends ConsumerState<CreateNewPasswordScree
                         decoration: appInputDecoration(
                           hint: 'Re-enter new password',
                           suffix: IconButton(
+                            tooltip: _obscureConfirm ? 'Show password' : 'Hide password',
                             icon: Icon(
                               _obscureConfirm
                                   ? Icons.visibility_outlined
@@ -259,48 +276,14 @@ class _CreateNewPasswordScreenState extends ConsumerState<CreateNewPasswordScree
                 ),
               ),
             ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(28, 12, 28, 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                top: false,
-                child: SizedBox(
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _onResetPasswordPressed,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryRed,
-                      disabledBackgroundColor: AppColors.primaryRed.withValues(alpha: 0.6),
-                      elevation: 4,
-                      shadowColor: AppColors.primaryRed.withValues(alpha: 0.4),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                          )
-                        : const Text(
-                            'Reset Password',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ),
+            BottomActionBar(
+              child: AppButton(
+                label: 'Reset password',
+                icon: Icons.lock_reset_rounded,
+                height: 54,
+                enabled: _isValid,
+                busy: _isLoading,
+                onPressed: _isValid ? _onResetPasswordPressed : null,
               ),
             ),
           ],

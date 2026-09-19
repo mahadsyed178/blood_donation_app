@@ -71,10 +71,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       case SplashStatus.authenticated:
         context.go(AppRoutes.dashboard);
       case SplashStatus.unauthenticated:
-      case SplashStatus.error:
         context.go(AppRoutes.onboarding);
+      case SplashStatus.error:
       case SplashStatus.loading:
-        break;
+        break; // error renders inline with a retry
     }
   }
 
@@ -159,7 +159,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 ),
               ),
               const SizedBox(height: 40),
-              _LoadingDots(controller: _dotsController),
+              if (current.status == SplashStatus.error)
+                _OfflineRetry(
+                  message: current.errorMessage ?? 'Server unreachable',
+                  onRetry: () => ref.read(splashProvider.notifier).retry(),
+                  onContinue: () => context.go(AppRoutes.login),
+                )
+              else
+                _LoadingDots(controller: _dotsController),
             ],
           ),
         ),
@@ -212,4 +219,50 @@ class _LoadingDots extends StatelessWidget {
       },
     );
   }
+}
+
+class _OfflineRetry extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onContinue;
+  const _OfflineRetry({required this.message, required this.onRetry, required this.onContinue});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          children: [
+            const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 28),
+            const SizedBox(height: 10),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onContinue,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white70),
+                  ),
+                  icon: const Icon(Icons.login_rounded, size: 16),
+                  label: const Text('Log in'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: onRetry,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.redAccent,
+                  ),
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
 }

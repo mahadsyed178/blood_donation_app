@@ -15,9 +15,14 @@ class AuthState {
   final AuthStatus status;
   final AuthUser? user;
 
-  const AuthState._(this.status, this.user);
+  /// A stored session exists but the server couldn't be reached to confirm
+  /// it. The token is kept; the splash offers a retry.
+  final bool serverUnreachable;
+
+  const AuthState._(this.status, this.user, {this.serverUnreachable = false});
   const AuthState.unknown() : this._(AuthStatus.unknown, null);
-  const AuthState.unauthenticated() : this._(AuthStatus.unauthenticated, null);
+  const AuthState.unauthenticated({bool serverUnreachable = false})
+      : this._(AuthStatus.unauthenticated, null, serverUnreachable: serverUnreachable);
   const AuthState.authenticated(AuthUser user) : this._(AuthStatus.authenticated, user);
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
@@ -41,6 +46,9 @@ class AuthNotifier extends Notifier<AuthState> {
   /// Auto-login on app start. A dead token, or an unreachable server, both
   /// land on unauthenticated — the login screen will explain the latter.
   Future<void> restoreSession() async {
+    // A retry after "server unreachable" goes back through the unknown phase
+    // so the splash waits for the outcome instead of re-showing the error.
+    if (state.serverUnreachable) state = const AuthState.unknown();
     final stored = await _storage.read();
     if (stored == null) {
       state = const AuthState.unauthenticated();
@@ -52,11 +60,14 @@ class AuthNotifier extends Notifier<AuthState> {
     } on ApiException catch (e) {
       if (e.kind == ApiErrorKind.unauthorized || e.kind == ApiErrorKind.forbidden) {
         await _storage.clear();
+        state = const AuthState.unauthenticated();
+      } else {
+        // Network / server trouble: keep the token so a retry can log in.
+        state = const AuthState.unauthenticated(serverUnreachable: true);
       }
-      state = const AuthState.unauthenticated();
     } catch (e) {
       debugPrint('[auth] restore failed: $e');
-      state = const AuthState.unauthenticated();
+      state = const AuthState.unauthenticated(serverUnreachable: true);
     }
   }
 

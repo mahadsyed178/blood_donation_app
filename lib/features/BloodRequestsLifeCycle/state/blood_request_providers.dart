@@ -135,6 +135,11 @@ class MyRequestsNotifier extends AsyncNotifier<List<BloodRequest>> {
           createdAt: r.createdAt,
           updatedAt: r.updatedAt,
           distanceKm: r.distanceKm,
+          approxLatitude: r.approxLatitude,
+          approxLongitude: r.approxLongitude,
+          latitude: r.latitude,
+          longitude: r.longitude,
+          isExactLocation: r.isExactLocation,
         );
       }).toList();
 }

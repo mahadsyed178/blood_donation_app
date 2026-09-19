@@ -7,6 +7,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/feedback.dart';
 
 /// Email + password login. The backend has one login endpoint per account
@@ -28,6 +29,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
   String? _formError;
 
+  bool get _isValid =>
+      validateEmail(_emailController.text) == null && _passwordController.text.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_refresh);
+    _passwordController.addListener(_refresh);
+  }
+
+  void _refresh() => setState(() {});
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -38,7 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _onLoginPressed() async {
     FocusScope.of(context).unfocus();
     setState(() => _formError = null);
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate() || _isLoading) return;
 
     setState(() => _isLoading = true);
     try {
@@ -72,6 +85,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Form(
                   key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -141,6 +155,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         decoration: appInputDecoration(
                           hint: 'Password',
                           suffix: IconButton(
+                            tooltip: _obscurePassword ? 'Show password' : 'Hide password',
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility_outlined
@@ -185,10 +200,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
             ),
-            _BottomButton(
-              isLoading: _isLoading,
-              label: 'Login',
-              onPressed: _onLoginPressed,
+            BottomActionBar(
+              child: AppButton(
+                label: 'Login',
+                icon: Icons.login_rounded,
+                height: 54,
+                enabled: _isValid,
+                busy: _isLoading,
+                onPressed: _isValid ? _onLoginPressed : null,
+              ),
             ),
           ],
         ),
@@ -335,56 +355,3 @@ class _ErrorBanner extends StatelessWidget {
       );
 }
 
-/// Sticky bottom CTA used across the auth flow.
-class _BottomButton extends StatelessWidget {
-  final bool isLoading;
-  final String label;
-  final VoidCallback onPressed;
-  const _BottomButton({required this.isLoading, required this.label, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(28, 12, 28, 20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 54,
-            child: ElevatedButton(
-              onPressed: isLoading ? null : onPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryRed,
-                disabledBackgroundColor: AppColors.primaryRed.withValues(alpha: 0.6),
-                elevation: 4,
-                shadowColor: AppColors.primaryRed.withValues(alpha: 0.4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              child: isLoading
-                  ? const SizedBox(
-                      height: 22,
-                      width: 22,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                    )
-                  : Text(
-                      label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
-          ),
-        ),
-      );
-}

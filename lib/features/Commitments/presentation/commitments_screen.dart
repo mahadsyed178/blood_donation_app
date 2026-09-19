@@ -8,6 +8,8 @@ import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../core/widgets/map/approximate_location_map.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../state/match_providers.dart';
 
 /// `GET /request-matches/mine` — every request this donor / organization
@@ -54,6 +56,7 @@ class _CommitmentsScreenState extends ConsumerState<CommitmentsScreen> {
               child: AsyncView<List<RequestMatch>>(
                 value: matches,
                 onRetry: refresh,
+                loadingBuilder: () => const SkeletonList(),
                 isEmpty: (list) => list.where((m) => m.isOpen != _showHistory).isEmpty,
                 emptyBuilder: () => ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -189,7 +192,7 @@ class _CommitmentCardState extends ConsumerState<_CommitmentCard> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                Chip2(label: m.status.label, color: statusColor),
+                Chip2(label: m.status.label, color: statusColor, icon: switch (m.status) { MatchStatus.accepted => Icons.hourglass_bottom_rounded, MatchStatus.completed => Icons.check_circle_rounded, MatchStatus.cancelled => Icons.cancel_rounded }),
                 Chip2(
                     label: r.urgencyLevel.label,
                     color: AppColors.urgency(r.urgencyLevel.apiValue),
@@ -200,6 +203,10 @@ class _CommitmentCardState extends ConsumerState<_CommitmentCard> {
                 Chip2(label: 'Request ${r.status.label}', color: AppColors.textGrey),
               ],
             ),
+            if (m.isOpen && r.approxPoint != null) ...[
+              const SizedBox(height: 12),
+              ApproximateLocationMap(point: r.approxPoint!, height: 130, caption: r.areaLabel),
+            ],
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),

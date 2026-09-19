@@ -17,6 +17,9 @@ class AsyncView<T> extends StatelessWidget {
   final bool Function(T data)? isEmpty;
   final Widget Function()? emptyBuilder;
 
+  /// Skeleton (or anything else) to show on first load instead of a spinner.
+  final Widget Function()? loadingBuilder;
+
   const AsyncView({
     super.key,
     required this.value,
@@ -24,6 +27,7 @@ class AsyncView<T> extends StatelessWidget {
     this.onRetry,
     this.isEmpty,
     this.emptyBuilder,
+    this.loadingBuilder,
   });
 
   @override
@@ -38,7 +42,7 @@ class AsyncView<T> extends StatelessWidget {
     if (value.hasError) {
       return ErrorState(error: value.error!, onRetry: onRetry);
     }
-    return const LoadingState();
+    return loadingBuilder?.call() ?? const LoadingState();
   }
 }
 
